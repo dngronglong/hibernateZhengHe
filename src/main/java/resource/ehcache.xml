@@ -1,0 +1,27 @@
+<ehcache>
+    <!-- <diskStore path="java.io.tmpdir"/> 是指数据放置在内存的临时目录中， 如果内存空间过小，我们还可以将数据存入到硬盘上，例如：<diskStore
+        path="d:/cache"/> -->
+    <diskStore path="java.io.tmpdir" />
+
+    <defaultCache maxElementsInMemory="10000" eternal="false"
+                  timeToIdleSeconds="120" timeToLiveSeconds="120" overflowToDisk="true"
+                  memoryStoreEvictionPolicy="LRU" />
+
+    <!-- maxElementsInMemory="10000" 缓存中，允许放置的最大缓存对象的个数 -->
+    <!-- eternal="false" 表示缓存的对象，是否需要持久化到硬盘中 -->
+    <!-- timeToIdleSeconds="120" 表示空闲的缓存对象，在缓存空间中，可以存活的时间，单位是S -->
+    <!-- timeToLiveSeconds="120" 表示缓存对象的钝化时间，设置使用过的缓存对象，重新给它设置一个复活时间 -->
+    <!-- overflowToDisk="true" 当内存空间不足时，是否将数据保存到硬盘中去 -->
+    <!-- memoryStoreEvictionPolicy="LRU" 当缓存空间不足时，可以采用以下算法来为新的缓存数据，清理缓存空间： FIFO
+        first in first out 先进先出 LRU Least Recently Used 最近最少时间 LFU Less Frequently
+        Used 最少使用（从缓存建立起来开始算，最少使用，就优先清理掉） -->
+
+    <cache name="stu" maxElementsInMemory="10000" eternal="false"
+           timeToIdleSeconds="120" timeToLiveSeconds="120" overflowToDisk="true"
+           memoryStoreEvictionPolicy="LRU" />
+
+    <cache name="orders" maxElementsInMemory="10000" eternal="false"
+           timeToIdleSeconds="120" timeToLiveSeconds="120" overflowToDisk="true"
+           memoryStoreEvictionPolicy="LRU" />
+
+</ehcache>

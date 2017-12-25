@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/cache
+        http://www.springframework.org/schema/cache/spring-cache.xsd">
+
+    <!-- spring和ehcache的整合，将会让我们不用再去担心持久层到底用的什么缓存技术 -->
+    <cache:annotation-driven cache-manager="cacheManager"/>
+    <bean id="cacheManager"
+          class="org.springframework.cache.ehcache.EhCacheCacheManager" p:cache-manager-ref="ehcache"/>
+
+    <bean id="ehcache"
+          class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:config-location="ehcache.xml"/>
+
+    <!-- 开启自动扫描 -->
+    <context:component-scan base-package="org.project"></context:component-scan>
+    <!-- 引入外部mysql.properties 数据库配置文件 -->
+    <context:property-placeholder location="classpath:mysql.properties"
+                                  ignore-unresolvable="true" ignore-resource-not-found="true" />
+
+    <!-- 配置数据源 :详情，请查看：http://www.mchange.com/projects/c3p0/#password -->
+    <!-- destroy-method="close" 当连接池销毁时，需要执行close()，销毁所有的连接 -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+        <!-- 配置JDBC连接数据库，所必须的4个最基本的元素 -->
+        <property name="driverClass" value="${driver}"></property>
+        <property name="jdbcUrl" value="${url}"></property>
+        <property name="user" value="${jdbc.username}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+
+        <!-- 池启动时尝试获取的连接数。应该在minPoolSize和 maxPoolSize之间 -->
+        <property name="initialPoolSize" value="15"></property>
+        <!-- 最少连接数，默认是：3 -->
+        <property name="minPoolSize" value="15"></property>
+        <!-- 最大连接数，默认是：15 -->
+        <property name="maxPoolSize" value="50"></property>
+        <!-- 当连接池中，连接不充足时，需要再次获取的连接数量 -->
+        <property name="acquireIncrement" value="5"></property>
+        <!-- 设置连接池中，可以缓存的最大预编译对象的个数 -->
+        <property name="maxStatements" value="200"></property>
+        <!-- 设置连接池中，空闲连接允许存在的最大时间，单位是秒 -->
+        <property name="maxIdleTime" value="60"></property>
+        <!-- 设置连接池中，间隔多长时间，检测1次空闲连接，单位是：秒 -->
+        <property name="idleConnectionTestPeriod" value="30"></property>
+        <!-- 设置连接池中，如果连接断开，或者是连接创建不成功的时候，重复获取连接的次数 -->
+        <property name="acquireRetryAttempts" value="30"></property>
+        <!-- 当应用程序通过getConnect()获取不到连接时，需要等待的最长时间，单位是：毫秒，如果设置 为0，表示无限期等待 -->
+        <property name="checkoutTimeout" value="5000"></property>
+        <!-- 每次获取新连接时，用于数据库校验连接是否可用 -->
+        <property name="preferredTestQuery" value="select now() from dual"></property>
+    </bean>
+
+    <!-- 配置SessionFactory -->
+    <bean id="sessionFactory"
+          class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+
+        <!-- 设置hibernate私有属性 -->
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                <prop key="hibernate.show_sql">true</prop>
+                <prop key="hibernate.format_sql">true</prop>
+            </props>
+        </property>
+
+        <!-- packagesToScan 用于扫描使用JPA规范,完成ORM映射的那些JavaBean -->
+        <property name="packagesToScan">
+            <list>
+                <value>org.project.beans</value>
+                <!-- <value>org.framestudy.sh.beans</value> -->
+            </list>
+        </property>
+
+        <!-- mappingDirectoryLocations 用于扫描使用XML,完成ORM映射的那些XXX.hbm.xml <property
+            name="mappingDirectoryLocations"> <list> <value>org/framestudy/sh/xmls</value>
+            </list> </property> -->
+    </bean>
+
+    <!-- 配置事物管理器 -->
+    <bean id="txManager"
+          class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"></property>
+    </bean>
+
+    <!-- 配置spring管理事务的2种方案： 编程式，声明式(注解版，AOP) -->
+    <tx:advice id="txAdvice" transaction-manager="txManager">
+        <tx:attributes>
+            <tx:method name="*" read-only="true" />
+
+            <tx:method name="add*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+            <tx:method name="save*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+            <tx:method name="insert*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+            <tx:method name="create*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+
+
+            <tx:method name="update*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+            <tx:method name="modify*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+            <tx:method name="change*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+
+            <tx:method name="delete*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+            <tx:method name="del*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+            <tx:method name="remove*" read-only="false" isolation="DEFAULT"
+                       propagation="REQUIRED" rollback-for="java.lang.Exception" />
+
+        </tx:attributes>
+    </tx:advice>
+
+    <aop:config>
+        <aop:pointcut id="expression"
+                      expression="execution(* org.project.*mag.service.impl.*ServiceImpl.*(..))" />
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="expression" />
+    </aop:config>
+
+    <aop:aspectj-autoproxy />
+</beans>
